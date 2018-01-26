@@ -1,31 +1,20 @@
-use std::io;
 use std::sync::Arc;
 
-use http;
-use tower_balance::{self, Balance};
-use tower_buffer::{self, Buffer};
+use tower;
+use tower_balance::{self, choose, Balance};
+use tower_buffer::Buffer;
 use tower_h2;
-use tower_reconnect;
 use tower_router::Recognize;
 
 use bind::Bind;
 use control;
 use ctx;
 use fully_qualified_authority::FullyQualifiedAuthority;
-use telemetry;
-use transport;
 
 type Discovery<B> = control::discovery::Watch<Bind<Arc<ctx::Proxy>, B>>;
 
-type Error = tower_buffer::Error<
-    tower_balance::Error<
-        tower_reconnect::Error<
-            tower_h2::client::Error,
-            tower_h2::client::ConnectError<transport::TimeoutError<io::Error>>,
-        >,
-        (),
-    >,
->;
+// todo: better lb
+type LoadBalance<B> = Balance<Discovery<B>, choose::RoundRobin>;
 
 pub struct Outbound<B> {
     bind: Bind<Arc<ctx::Proxy>, B>,
@@ -51,14 +40,14 @@ impl<B> Outbound<B> {
 
 impl<B> Recognize for Outbound<B>
 where
-    B: tower_h2::Body + 'static,
+    B: tower_h2::Body + 'static
 {
-    type Request = http::Request<B>;
-    type Response = http::Response<telemetry::sensor::http::ResponseBody<tower_h2::RecvBody>>;
-    type Error = Error;
+    type Request = <Buffer<LoadBalance<B>> as tower::Service>::Request;
+    type Response = <Buffer<LoadBalance<B>> as tower::Service>::Response;
+    type Error = <Buffer<LoadBalance<B>> as tower::Service>::Error;
     type Key = FullyQualifiedAuthority;
     type RouteError = ();
-    type Service = Buffer<Balance<Discovery<B>>>;
+    type Service = Buffer<LoadBalance<B>>;
 
     fn recognize(&self, req: &Self::Request) -> Option<Self::Key> {
         req.uri().authority_part().map(|authority|
@@ -86,7 +75,8 @@ where
 
         let resolve = self.discovery.resolve(authority, self.bind.clone());
 
-        let balance = Balance::new(resolve);
+        // TODO: move to p2c lb.
+        let balance = tower_balance::round_robin(resolve);
 
         // Wrap with buffering. This currently is an unbounded buffer,
         // which is not ideal.

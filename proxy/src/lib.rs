@@ -1,6 +1,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(clone_on_ref_ptr))]
 #![cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
-// #![deny(warnings)]
+#![deny(warnings)]
 
 extern crate abstract_ns;
 extern crate bytes;
@@ -74,7 +74,6 @@ mod tower_fn; // TODO: move to tower-fn
 
 use bind::Bind;
 use connection::BoundPort;
-use control::pb::proxy::tap;
 use inbound::Inbound;
 use map_err::MapErr;
 use outbound::Outbound;

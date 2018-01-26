@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
@@ -21,7 +20,6 @@ use fully_qualified_authority::FullyQualifiedAuthority;
 use transport::LookupAddressAndConnect;
 use timeout::Timeout;
 
-mod codec;
 pub mod discovery;
 mod observe;
 pub mod pb;
@@ -31,7 +29,6 @@ use self::discovery::{Background as DiscoBg, Discovery, Watch};
 pub use self::discovery::Bind;
 pub use self::observe::Observe;
 use self::pb::proxy::telemetry::ReportRequest;
-use self::pb::proxy::destination::client::Destination as DestinationSvc;
 use self::telemetry::Telemetry;
 
 pub struct Control {
@@ -218,74 +215,3 @@ where
     }
 }
 
-// ===== impl  EnumService =====
-
-/*
-struct EnumService<S, B>(S, PhantomData<B>);
-
-impl<S, B> Service for EnumService<S, B>
-where
-    S: Service<Request = http::Request<GrpcEncodingBody>>,
-    B: Into<GrpcEncodingBody>,
-{
-    type Request = http::Request<B>;
-    type Response = S::Response;
-    type Error = S::Error;
-    type Future = S::Future;
-
-    fn poll_ready(&mut self) -> Poll<(), Self::Error> {
-        self.0.poll_ready()
-    }
-
-    fn call(&mut self, req: Self::Request) -> Self::Future {
-        let (head, body) = req.into_parts();
-        self.0.call(http::Request::from_parts(head, body.into()))
-    }
-}
-
-
-enum GrpcEncodingBody {
-    TelemetryReport(self::telemetry::ClientBody),
-    DestinationGet(self::discovery::ClientBody),
-}
-
-impl tower_h2::Body for GrpcEncodingBody {
-    type Data = Bytes;
-
-    #[inline]
-    fn is_end_stream(&self) -> bool {
-        match *self {
-            GrpcEncodingBody::TelemetryReport(ref b) => b.is_end_stream(),
-            GrpcEncodingBody::DestinationGet(ref b) => b.is_end_stream(),
-        }
-    }
-
-    #[inline]
-    fn poll_data(&mut self) -> Poll<Option<Self::Data>, h2::Error> {
-        match *self {
-            GrpcEncodingBody::TelemetryReport(ref mut b) => b.poll_data(),
-            GrpcEncodingBody::DestinationGet(ref mut b) => b.poll_data(),
-        }
-    }
-
-    #[inline]
-    fn poll_trailers(&mut self) -> Poll<Option<http::HeaderMap>, h2::Error> {
-        match *self {
-            GrpcEncodingBody::TelemetryReport(ref mut b) => b.poll_trailers(),
-            GrpcEncodingBody::DestinationGet(ref mut b) => b.poll_trailers(),
-        }
-    }
-}
-
-impl From<self::telemetry::ClientBody> for GrpcEncodingBody {
-    fn from(body: self::telemetry::ClientBody) -> Self {
-        GrpcEncodingBody::TelemetryReport(body)
-    }
-}
-
-impl From<self::discovery::ClientBody> for GrpcEncodingBody {
-    fn from(body: self::discovery::ClientBody) -> Self {
-        GrpcEncodingBody::DestinationGet(body)
-    }
-}
-*/
